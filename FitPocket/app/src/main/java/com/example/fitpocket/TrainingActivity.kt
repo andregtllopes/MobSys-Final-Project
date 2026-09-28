@@ -10,6 +10,7 @@ import android.os.SystemClock
 import android.view.WindowManager
 import android.widget.Button
 import android.widget.Chronometer
+import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -18,8 +19,8 @@ import kotlin.math.acos
 import kotlin.math.sqrt
 
 /**
- * Sensor 1: PROXIMIDADE  -> flexão (peito se aproxima do topo da tela)
- * Sensor 2: ACELERÔMETRO -> abdominal (inclinação do tronco)
+ * Sensor 1: PROXIMITY     -> push-up (chest approaching the top of the screen)
+ * Sensor 2: ACCELEROMETER -> sit-up (torso tilt angle)
  */
 class TrainingActivity : AppCompatActivity(), SensorEventListener {
 
@@ -28,12 +29,24 @@ class TrainingActivity : AppCompatActivity(), SensorEventListener {
         private const val UP_ANGLE = 40.0              // graus: passou disso = subiu
         private const val DOWN_ANGLE = 20.0            // graus: voltou abaixo disso = desceu (conta 1)
         private const val LOW_PASS = 0.85f             // filtro para isolar a gravidade
+
+        // Limiar fixo em cm em vez de comparar com sensor.maximumRange: em vários aparelhos
+        // (Samsung incluso) esse valor vem incorreto/zerado do fabricante, o que travava a
+        // detecção sempre em "longe". A maioria dos sensores de proximidade é binária
+        // (retorna 0 quando coberto, e o maximumRange quando livre), então um limiar pequeno
+        // e fixo funciona de forma confiável entre aparelhos.
+        private const val PROXIMITY_NEAR_CM = 3f
+
+        // Só para desenhar a barra de intensidade (0-100%), não afeta a detecção da repetição.
+        private const val PROXIMITY_BAR_REFERENCE_CM = 8f
     }
 
     private lateinit var sensorManager: SensorManager
     private lateinit var exercise: Exercise
     private lateinit var ring: ProgressRingView
     private lateinit var chrono: Chronometer
+    private lateinit var progressIntensity: ProgressBar
+    private lateinit var tvSensorDebug: TextView
     private var sensor: Sensor? = null
 
     private var goal = 10
@@ -68,6 +81,8 @@ class TrainingActivity : AppCompatActivity(), SensorEventListener {
 
         ring = findViewById(R.id.ring)
         chrono = findViewById(R.id.chrono)
+        progressIntensity = findViewById(R.id.progressIntensity)
+        tvSensorDebug = findViewById(R.id.tvSensorDebug)
         val tvExercise = findViewById<TextView>(R.id.tvExercise)
         val tvHint = findViewById<TextView>(R.id.tvHint)
         val btnManual = findViewById<Button>(R.id.btnManual)
@@ -76,9 +91,9 @@ class TrainingActivity : AppCompatActivity(), SensorEventListener {
         tvExercise.text = exercise.label
         tvHint.text = when (exercise) {
             Exercise.PUSH_UP ->
-                "Deixe o celular no chão, tela para cima. Desça até o peito cobrir o topo da tela."
+                "Place the phone on the floor, screen up. Lower your chest toward it."
             Exercise.SIT_UP ->
-                "Deite com o celular sobre o peito, tela para cima. Suba e desça o tronco."
+                "Lie down with the phone on your chest, screen up. Crunch up and down."
         }
         ring.setProgress(reps, goal)
 
@@ -89,7 +104,7 @@ class TrainingActivity : AppCompatActivity(), SensorEventListener {
         }
         sensor = sensorManager.getDefaultSensor(type)
         if (sensor == null) {
-            Snackbar.make(ring, "Sensor indisponível neste aparelho. Use o botão +1.", Snackbar.LENGTH_LONG).show()
+            Snackbar.make(ring, "Sensor unavailable on this device. Use the +1 button.", Snackbar.LENGTH_LONG).show()
         }
 
         chrono.base = SystemClock.elapsedRealtime()
@@ -129,7 +144,15 @@ class TrainingActivity : AppCompatActivity(), SensorEventListener {
 
     /** Flexão: conta na transição "longe -> perto" (peito desceu). */
     private fun handleProximity(event: SensorEvent) {
-        val near = event.values[0] < event.sensor.maximumRange
+        val distanceCm = event.values[0]
+        val near = distanceCm < PROXIMITY_NEAR_CM
+
+        // Barra de intensidade: 0% longe, 100% perto o bastante para contar.
+        val intensity = ((PROXIMITY_BAR_REFERENCE_CM - distanceCm) / PROXIMITY_BAR_REFERENCE_CM * 100f)
+            .coerceIn(0f, 100f)
+        progressIntensity.progress = intensity.toInt()
+        tvSensorDebug.text = "debug: %.1f cm".format(distanceCm)
+
         if (near && !wasNear) countRep()
         wasNear = near
     }
@@ -142,6 +165,11 @@ class TrainingActivity : AppCompatActivity(), SensorEventListener {
         val norm = sqrt(gravity[0] * gravity[0] + gravity[1] * gravity[1] + gravity[2] * gravity[2])
         if (norm < 1f) return
         val angle = Math.toDegrees(acos((gravity[2] / norm).coerceIn(-1f, 1f).toDouble()))
+
+        // Barra de intensidade: 0% deitado, 100% no topo do movimento (UP_ANGLE).
+        val intensity = (angle / UP_ANGLE * 100.0).coerceIn(0.0, 100.0)
+        progressIntensity.progress = intensity.toInt()
+        tvSensorDebug.text = "debug: %.0f°".format(angle)
 
         if (!isUp && angle > UP_ANGLE) {
             isUp = true
@@ -162,7 +190,7 @@ class TrainingActivity : AppCompatActivity(), SensorEventListener {
         reps++
         ring.setProgress(reps, goal)
         if (reps == goal) {
-            Snackbar.make(ring, "Meta atingida! Toque em Finalizar.", Snackbar.LENGTH_LONG).show()
+            Snackbar.make(ring, "Goal reached! Tap Finish.", Snackbar.LENGTH_LONG).show()
         }
     }
 }

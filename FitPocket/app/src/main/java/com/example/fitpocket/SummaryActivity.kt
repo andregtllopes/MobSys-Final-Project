@@ -33,9 +33,9 @@ class SummaryActivity : AppCompatActivity() {
         val duration = intent.getIntExtra(Extras.DURATION, 0)
 
         findViewById<TextView>(R.id.tvExercise).text = exercise.label
-        findViewById<TextView>(R.id.tvReps).text = "$reps de $goal repetições"
+        findViewById<TextView>(R.id.tvReps).text = "$reps of $goal reps"
         findViewById<TextView>(R.id.tvTime).text =
-            "Tempo: ${duration / 60}:${"%02d".format(duration % 60)}"
+            "Time: ${duration / 60}:${"%02d".format(duration % 60)}"
 
         ratingEffort = findViewById(R.id.ratingEffort)
         etNote = findViewById(R.id.etNote)

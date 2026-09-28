@@ -1,6 +1,8 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Must stay a Material Components theme, otherwise Snackbar.make() throws at runtime. -->
-    <style name="Theme.FitPocket" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+    <!-- Must stay a Material Components theme, otherwise Snackbar.make() throws at runtime.
+         Deliberately Light (not DayNight): the layouts hardcode a light background, and
+         DayNight would flip text to white under system dark mode, making it unreadable. -->
+    <style name="Theme.FitPocket" parent="Theme.MaterialComponents.Light.NoActionBar">
         <item name="colorPrimary">@color/primary</item>
         <item name="colorPrimaryDark">@color/primary_dark</item>
         <item name="colorAccent">@color/accent</item>

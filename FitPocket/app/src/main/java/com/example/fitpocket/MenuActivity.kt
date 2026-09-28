@@ -23,8 +23,8 @@ class MenuActivity : AppCompatActivity() {
     ) { result ->
         val saved = result.data?.getBooleanExtra(Extras.SAVED, false) == true
         if (result.resultCode == RESULT_OK && saved) {
-            Snackbar.make(root, "Treino salvo no histórico!", Snackbar.LENGTH_LONG)
-                .setAction("Ver") {
+            Snackbar.make(root, "Workout saved to history!", Snackbar.LENGTH_LONG)
+                .setAction("View") {
                     startActivity(Intent(this, HistoryActivity::class.java))
                 }
                 .show()

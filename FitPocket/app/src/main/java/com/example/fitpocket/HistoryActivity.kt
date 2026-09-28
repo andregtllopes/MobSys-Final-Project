@@ -27,7 +27,7 @@ class HistoryActivity : AppCompatActivity() {
                 tvEmpty.visibility = View.VISIBLE
             } else {
                 rv.adapter = WorkoutAdapter(list) { workout ->
-                    val msg = if (workout.note.isBlank()) "Sem anotação neste treino." else workout.note
+                    val msg = if (workout.note.isBlank()) "No note for this workout." else workout.note
                     Snackbar.make(rv, msg, Snackbar.LENGTH_LONG).show()
                 }
             }

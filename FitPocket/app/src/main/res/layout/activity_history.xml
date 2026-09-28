@@ -9,7 +9,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:padding="8dp"
-        android:text="Histórico do atleta"
+        android:text="Workout history"
         android:textSize="28sp"
         android:textStyle="bold" />
 
@@ -28,7 +28,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
-            android:text="Nenhum treino salvo ainda."
+            android:text="No workouts saved yet."
             android:visibility="gone" />
     </FrameLayout>
 </LinearLayout>

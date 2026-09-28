@@ -37,8 +37,8 @@ class WorkoutAdapter(
         val date = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date(w.timestamp))
         val time = "${w.durationSec / 60}:${"%02d".format(w.durationSec % 60)}"
 
-        holder.tvTitle.text = "$label — ${w.reps}/${w.goal} repetições"
-        holder.tvDetail.text = "$date · $time · esforço ${w.effort.toInt()}/5"
+        holder.tvTitle.text = "$label — ${w.reps}/${w.goal} reps"
+        holder.tvDetail.text = "$date · $time · effort ${w.effort.toInt()}/5"
         holder.itemView.setOnClickListener { listener.onWorkoutClick(w) }
     }
 
