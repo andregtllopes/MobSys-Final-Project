@@ -10,19 +10,14 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-/** Contrato do clique (padrão de delegação do Tutorial 5): o Adapter só avisa, a Activity decide. */
-fun interface OnWorkoutClickListener {
-    fun onWorkoutClick(workout: Workout)
-}
-
 class WorkoutAdapter(
-    private val items: List<Workout>,
-    private val listener: OnWorkoutClickListener
+    private val items: List<Workout>
 ) : RecyclerView.Adapter<WorkoutAdapter.ViewHolder>() {
 
     class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val tvTitle: TextView = view.findViewById(R.id.tvTitle)
         val tvDetail: TextView = view.findViewById(R.id.tvDetail)
+        val tvNote: TextView = view.findViewById(R.id.tvNote)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -39,7 +34,14 @@ class WorkoutAdapter(
 
         holder.tvTitle.text = "$label — ${w.reps}/${w.goal} reps"
         holder.tvDetail.text = "$date · $time · effort ${w.effort.toInt()}/5"
-        holder.itemView.setOnClickListener { listener.onWorkoutClick(w) }
+
+        // Nota exibida direto no card, sem precisar de clique/Snackbar para revelar.
+        if (w.note.isBlank()) {
+            holder.tvNote.visibility = View.GONE
+        } else {
+            holder.tvNote.visibility = View.VISIBLE
+            holder.tvNote.text = "“${w.note}”"
+        }
     }
 
     override fun getItemCount() = items.size

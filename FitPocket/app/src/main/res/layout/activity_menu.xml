@@ -38,7 +38,7 @@
                     android:layout_weight="1" />
 
                 <LinearLayout
-                    android:id="@+id/btnHistory"
+                    android:id="@+id/btnProgress"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:background="?attr/selectableItemBackgroundBorderless"
@@ -51,14 +51,14 @@
                     <ImageView
                         android:layout_width="18dp"
                         android:layout_height="18dp"
-                        android:src="@drawable/ic_history_line"
+                        android:src="@drawable/ic_trending_up_line"
                         android:tint="@color/text_secondary" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="6dp"
-                        android:text="History"
+                        android:text="Progress"
                         android:textColor="@color/text_secondary"
                         android:textSize="14sp" />
                 </LinearLayout>

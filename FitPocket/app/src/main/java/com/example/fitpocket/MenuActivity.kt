@@ -14,13 +14,13 @@ class MenuActivity : AppCompatActivity() {
     private lateinit var goalGroup: RadioGroup
 
     // Cards/linhas clicáveis, não androidx.widget.Button — mantém a hierarquia visual:
-    // os exercícios são ações primárias (cards grandes), Histórico é uma ação secundária
+    // os exercícios são ações primárias (cards grandes), Progress é uma ação secundária
     // discreta no topo, não um botão do mesmo peso visual.
     private lateinit var btnPushUp: View
     private lateinit var btnSitUp: View
     private lateinit var btnSquat: View
     private lateinit var btnJumpingJack: View
-    private lateinit var btnHistory: View
+    private lateinit var btnProgress: View
 
     // Volta da TrainingActivity (que por sua vez recebeu o resultado da SummaryActivity)
     private val trainingLauncher = registerForActivityResult(
@@ -28,9 +28,9 @@ class MenuActivity : AppCompatActivity() {
     ) { result ->
         val saved = result.data?.getBooleanExtra(Extras.SAVED, false) == true
         if (result.resultCode == RESULT_OK && saved) {
-            Snackbar.make(root, "Workout saved to history!", Snackbar.LENGTH_LONG)
-                .setAction("View") {
-                    startActivity(Intent(this, HistoryActivity::class.java))
+            Snackbar.make(root, "Workout saved!", Snackbar.LENGTH_LONG)
+                .setAction("View progress") {
+                    startActivity(Intent(this, ProgressActivity::class.java))
                 }
                 .show()
         }
@@ -46,18 +46,18 @@ class MenuActivity : AppCompatActivity() {
         btnSitUp = findViewById(R.id.btnSitUp)
         btnSquat = findViewById(R.id.btnSquat)
         btnJumpingJack = findViewById(R.id.btnJumpingJack)
-        btnHistory = findViewById(R.id.btnHistory)
+        btnProgress = findViewById(R.id.btnProgress)
 
         btnPushUp.setOnClickListener { startTraining(Exercise.PUSH_UP) }
         btnSitUp.setOnClickListener { startTraining(Exercise.SIT_UP) }
         btnSquat.setOnClickListener { startTraining(Exercise.SQUAT) }
         btnJumpingJack.setOnClickListener { startTraining(Exercise.JUMPING_JACK) }
-        btnHistory.setOnClickListener {
-            startActivity(Intent(this, HistoryActivity::class.java))
+        btnProgress.setOnClickListener {
+            startActivity(Intent(this, ProgressActivity::class.java))
         }
 
         // Animação de entrada: botões sobem e aparecem em sequência
-        listOf(btnPushUp, btnSitUp, btnSquat, btnJumpingJack, btnHistory).forEachIndexed { i, button ->
+        listOf(btnPushUp, btnSitUp, btnSquat, btnJumpingJack, btnProgress).forEachIndexed { i, button ->
             button.alpha = 0f
             button.translationY = 80f
             button.animate()
