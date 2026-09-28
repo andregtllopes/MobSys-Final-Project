@@ -7,6 +7,7 @@ import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.os.Bundle
 import android.os.SystemClock
+import android.util.Log
 import android.view.WindowManager
 import android.widget.Button
 import android.widget.Chronometer
@@ -29,16 +30,7 @@ class TrainingActivity : AppCompatActivity(), SensorEventListener {
         private const val UP_ANGLE = 40.0              // graus: passou disso = subiu
         private const val DOWN_ANGLE = 20.0            // graus: voltou abaixo disso = desceu (conta 1)
         private const val LOW_PASS = 0.85f             // filtro para isolar a gravidade
-
-        // Limiar fixo em cm em vez de comparar com sensor.maximumRange: em vários aparelhos
-        // (Samsung incluso) esse valor vem incorreto/zerado do fabricante, o que travava a
-        // detecção sempre em "longe". A maioria dos sensores de proximidade é binária
-        // (retorna 0 quando coberto, e o maximumRange quando livre), então um limiar pequeno
-        // e fixo funciona de forma confiável entre aparelhos.
-        private const val PROXIMITY_NEAR_CM = 3f
-
-        // Só para desenhar a barra de intensidade (0-100%), não afeta a detecção da repetição.
-        private const val PROXIMITY_BAR_REFERENCE_CM = 8f
+        private const val TAG = "FitPocketSensor"
     }
 
     private lateinit var sensorManager: SensorManager
@@ -53,8 +45,11 @@ class TrainingActivity : AppCompatActivity(), SensorEventListener {
     private var reps = 0
     private var lastRepTime = 0L
 
-    // estado da flexão
+    // estado da flexão — calibrado dinamicamente, sem supor a unidade que o aparelho reporta
+    // (alguns reportam distância em cm, outros só um valor binário 0/1)
     private var wasNear = false
+    private var farBaseline = 0f
+    private var baselineReady = false
 
     // estado do abdominal
     private val gravity = floatArrayOf(0f, 0f, 9.8f)
@@ -106,6 +101,7 @@ class TrainingActivity : AppCompatActivity(), SensorEventListener {
         if (sensor == null) {
             Snackbar.make(ring, "Sensor unavailable on this device. Use the +1 button.", Snackbar.LENGTH_LONG).show()
         }
+        Log.d(TAG, "exercise=$exercise sensor=$sensor maximumRange=${sensor?.maximumRange} resolution=${sensor?.resolution}")
 
         chrono.base = SystemClock.elapsedRealtime()
         chrono.start()
@@ -142,16 +138,35 @@ class TrainingActivity : AppCompatActivity(), SensorEventListener {
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
 
-    /** Flexão: conta na transição "longe -> perto" (peito desceu). */
+    /**
+     * Flexão: conta na transição "longe -> perto" (peito desceu).
+     *
+     * NÃO supomos a unidade do valor bruto: dependendo do aparelho, TYPE_PROXIMITY pode
+     * reportar distância em cm (ex.: 0..5, 0..8) OU só um valor binário 0/1 — nesse segundo
+     * caso, um limiar fixo tipo "< 3cm" trata os DOIS estados como "perto" e a detecção nunca
+     * volta a "longe", travando a contagem (isso é o que provavelmente estava acontecendo).
+     * Em vez de um número fixo, aprendemos ao vivo qual é o valor de "longe" neste aparelho e
+     * comparamos de forma relativa a ele.
+     */
     private fun handleProximity(event: SensorEvent) {
-        val distanceCm = event.values[0]
-        val near = distanceCm < PROXIMITY_NEAR_CM
+        val v = event.values[0]
 
-        // Barra de intensidade: 0% longe, 100% perto o bastante para contar.
-        val intensity = ((PROXIMITY_BAR_REFERENCE_CM - distanceCm) / PROXIMITY_BAR_REFERENCE_CM * 100f)
-            .coerceIn(0f, 100f)
+        // Atualiza a referência de "longe" enquanto não estivermos perto (ou na primeira leitura).
+        if (!baselineReady || (!wasNear && v > farBaseline)) {
+            farBaseline = v
+            baselineReady = true
+        }
+        // "Perto" = caiu abaixo de 60% do valor de "longe" observado neste aparelho (margem
+        // generosa para aparelhos que não reportam um "perto" totalmente zerado).
+        val threshold = (farBaseline * 0.6f).coerceAtLeast(0.05f)
+        val near = v < threshold
+
+        val intensity = if (farBaseline > 0f) {
+            ((farBaseline - v) / farBaseline * 100f).coerceIn(0f, 100f)
+        } else 0f
         progressIntensity.progress = intensity.toInt()
-        tvSensorDebug.text = "debug: %.1f cm".format(distanceCm)
+        tvSensorDebug.text = "debug: value=%.2f far=%.2f thr=%.2f".format(v, farBaseline, threshold)
+        Log.d(TAG, "proximity value=$v far=$farBaseline threshold=$threshold near=$near wasNear=$wasNear")
 
         if (near && !wasNear) countRep()
         wasNear = near
