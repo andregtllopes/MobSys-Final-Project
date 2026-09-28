@@ -1,19 +1,21 @@
 # FitPocket
 
-> **Nota:** este projeto já foi completado com o Gradle (build.gradle.kts, settings.gradle.kts,
-> tema `Theme.FitPocket`, ícone e KSP/Room configurados) e é compilado automaticamente pelo
-> GitHub Actions (`.github/workflows/android-build.yml`, job `build-fitpocket`). As instruções
-> originais abaixo eram para montagem manual num projeto novo do Android Studio; não são mais
-> necessárias, mas ficam de referência.
+A pocket workout tracker: push-ups, sit-ups, squats and jumping jacks, counted automatically by
+the phone's accelerometer, with a Canvas-drawn progress ring, a gamified Progress screen (streak,
+total reps, weekly bar chart), and workouts saved locally with Room.
 
-## Como montar manualmente no Android Studio (instruções originais, opcional)
+This project is a fully set up Gradle project (`build.gradle.kts`, `settings.gradle.kts`, the
+`Theme.FitPocket` theme, launcher icon, and KSP/Room already configured) and is built
+automatically by GitHub Actions (`.github/workflows/android-build.yml`, job `build-fitpocket`).
 
-1. New Project > Empty Views Activity. Name: FitPocket, package: com.example.fitpocket,
-   Language: Kotlin, Minimum SDK: API 34.
-2. Apague a MainActivity e o activity_main.xml gerados.
-3. Copie as pastas de `app/src/main/java/com/example/fitpocket` e `app/src/main/res/layout`
-   deste zip para o mesmo lugar no seu projeto.
-4. Substitua o AndroidManifest.xml pelo deste zip (mantenha o tema `Theme.FitPocket` que o
-   Android Studio gerou; ele precisa ser um tema Material para o Snackbar funcionar).
-5. Aplique as alterações do GRADLE_SNIPPETS.md e faça Sync.
-6. Rode. No emulador use o botão "+1 (modo teste)"; no celular de verdade teste os sensores.
+## Opening it
+
+Open this `FitPocket` folder directly in Android Studio (2024.x/2025.x or newer) and let Gradle
+sync — minSdk 34, so an emulator or phone on Android 14+ is required to run it.
+
+## How each exercise is detected
+
+- **Sit-up**: angle between the phone's Z axis and vertical (phone on the chest).
+- **Push-up, Squat, Jumping Jack**: accelerometer motion intensity (peaks above/below a
+  threshold), with the phone held or kept snug against the body — see the in-app hint on each
+  exercise's screen for exact placement.
