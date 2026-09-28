@@ -16,12 +16,13 @@ import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.snackbar.Snackbar
+import kotlin.math.abs
 import kotlin.math.acos
 import kotlin.math.sqrt
 
 /**
  * Sensor 1: PROXIMITY     -> push-up (chest approaching the top of the screen)
- * Sensor 2: ACCELEROMETER -> sit-up (torso tilt angle)
+ * Sensor 2: ACCELEROMETER -> sit-up (torso tilt angle), squat & jumping jack (motion intensity)
  */
 class TrainingActivity : AppCompatActivity(), SensorEventListener {
 
@@ -31,6 +32,16 @@ class TrainingActivity : AppCompatActivity(), SensorEventListener {
         private const val DOWN_ANGLE = 20.0            // graus: voltou abaixo disso = desceu (conta 1)
         private const val LOW_PASS = 0.85f             // filtro para isolar a gravidade
         private const val TAG = "FitPocketSensor"
+
+        // Agachamento e polichinelo contam por PICO de intensidade de movimento (desvio da
+        // aceleração em relação à gravidade), não por ângulo. Valores iniciais estimados a
+        // partir do padrão de movimento de cada exercício (polichinelo é bem mais brusco que
+        // agachamento); a barra + valor de debug na tela ajudam a recalibrar se necessário.
+        private const val MOTION_EMA_ALPHA = 0.5f
+        private const val SQUAT_RISE = 3.0f
+        private const val SQUAT_FALL = 1.0f
+        private const val JACK_RISE = 9.0f
+        private const val JACK_FALL = 3.0f
     }
 
     private lateinit var sensorManager: SensorManager
@@ -54,6 +65,10 @@ class TrainingActivity : AppCompatActivity(), SensorEventListener {
     // estado do abdominal
     private val gravity = floatArrayOf(0f, 0f, 9.8f)
     private var isUp = false
+
+    // estado de agachamento/polichinelo
+    private var motionIntensityEma = 0f
+    private var motionPeak = false
 
     // Volta da SummaryActivity: repassa o resultado para o menu e fecha
     private val summaryLauncher = registerForActivityResult(
@@ -89,13 +104,17 @@ class TrainingActivity : AppCompatActivity(), SensorEventListener {
                 "Place the phone on the floor, screen up. Lower your chest toward it."
             Exercise.SIT_UP ->
                 "Lie down with the phone on your chest, screen up. Crunch up and down."
+            Exercise.SQUAT ->
+                "Hold the phone in your hand or front pocket. Squat down and stand back up."
+            Exercise.JUMPING_JACK ->
+                "Hold the phone in your hand. Jump your feet apart and back together."
         }
         ring.setProgress(reps, goal)
 
         sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
         val type = when (exercise) {
             Exercise.PUSH_UP -> Sensor.TYPE_PROXIMITY
-            Exercise.SIT_UP -> Sensor.TYPE_ACCELEROMETER
+            Exercise.SIT_UP, Exercise.SQUAT, Exercise.JUMPING_JACK -> Sensor.TYPE_ACCELEROMETER
         }
         sensor = sensorManager.getDefaultSensor(type)
         if (sensor == null) {
@@ -130,9 +149,11 @@ class TrainingActivity : AppCompatActivity(), SensorEventListener {
     }
 
     override fun onSensorChanged(event: SensorEvent) {
-        when (event.sensor.type) {
-            Sensor.TYPE_PROXIMITY -> handleProximity(event)
-            Sensor.TYPE_ACCELEROMETER -> handleTilt(event)
+        when (exercise) {
+            Exercise.PUSH_UP -> handleProximity(event)
+            Exercise.SIT_UP -> handleTilt(event)
+            Exercise.SQUAT -> handleMotionPeak(event, SQUAT_RISE, SQUAT_FALL)
+            Exercise.JUMPING_JACK -> handleMotionPeak(event, JACK_RISE, JACK_FALL)
         }
     }
 
@@ -190,6 +211,36 @@ class TrainingActivity : AppCompatActivity(), SensorEventListener {
             isUp = true
         } else if (isUp && angle < DOWN_ANGLE) {
             isUp = false
+            countRep()
+        }
+    }
+
+    /**
+     * Agachamento e polichinelo: contam por PICO de intensidade de movimento, não por ângulo
+     * (o corpo desce/sobe ou os braços/pernas abrem/fecham de forma rápida demais para medir
+     * um ângulo estável). Usamos a mesma ideia de histerese do abdominal (handleTilt), só que
+     * aplicada à magnitude da aceleração: passa de [riseThreshold] = "em movimento", cai abaixo
+     * de [fallThreshold] = "voltou ao repouso", conta 1 repetição. Os dois exercícios usam
+     * exatamente esta função, só com limiares diferentes.
+     */
+    private fun handleMotionPeak(event: SensorEvent, riseThreshold: Float, fallThreshold: Float) {
+        val magnitude = sqrt(
+            event.values[0] * event.values[0] +
+                event.values[1] * event.values[1] +
+                event.values[2] * event.values[2]
+        )
+        val deviation = abs(magnitude - SensorManager.GRAVITY_EARTH)
+        motionIntensityEma = motionIntensityEma * (1 - MOTION_EMA_ALPHA) + deviation * MOTION_EMA_ALPHA
+
+        val intensity = (motionIntensityEma / riseThreshold * 100f).coerceIn(0f, 100f)
+        progressIntensity.progress = intensity.toInt()
+        tvSensorDebug.text = "debug: %.2f (rise=%.1f fall=%.1f)".format(motionIntensityEma, riseThreshold, fallThreshold)
+        Log.d(TAG, "motion ema=$motionIntensityEma rise=$riseThreshold fall=$fallThreshold peak=$motionPeak")
+
+        if (!motionPeak && motionIntensityEma > riseThreshold) {
+            motionPeak = true
+        } else if (motionPeak && motionIntensityEma < fallThreshold) {
+            motionPeak = false
             countRep()
         }
     }

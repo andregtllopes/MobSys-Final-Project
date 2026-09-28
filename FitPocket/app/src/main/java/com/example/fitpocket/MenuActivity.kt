@@ -18,6 +18,8 @@ class MenuActivity : AppCompatActivity() {
     // discreta no topo, não um botão do mesmo peso visual.
     private lateinit var btnPushUp: View
     private lateinit var btnSitUp: View
+    private lateinit var btnSquat: View
+    private lateinit var btnJumpingJack: View
     private lateinit var btnHistory: View
 
     // Volta da TrainingActivity (que por sua vez recebeu o resultado da SummaryActivity)
@@ -42,16 +44,20 @@ class MenuActivity : AppCompatActivity() {
         goalGroup = findViewById(R.id.goalGroup)
         btnPushUp = findViewById(R.id.btnPushUp)
         btnSitUp = findViewById(R.id.btnSitUp)
+        btnSquat = findViewById(R.id.btnSquat)
+        btnJumpingJack = findViewById(R.id.btnJumpingJack)
         btnHistory = findViewById(R.id.btnHistory)
 
         btnPushUp.setOnClickListener { startTraining(Exercise.PUSH_UP) }
         btnSitUp.setOnClickListener { startTraining(Exercise.SIT_UP) }
+        btnSquat.setOnClickListener { startTraining(Exercise.SQUAT) }
+        btnJumpingJack.setOnClickListener { startTraining(Exercise.JUMPING_JACK) }
         btnHistory.setOnClickListener {
             startActivity(Intent(this, HistoryActivity::class.java))
         }
 
         // Animação de entrada: botões sobem e aparecem em sequência
-        listOf(btnPushUp, btnSitUp, btnHistory).forEachIndexed { i, button ->
+        listOf(btnPushUp, btnSitUp, btnSquat, btnJumpingJack, btnHistory).forEachIndexed { i, button ->
             button.alpha = 0f
             button.translationY = 80f
             button.animate()
