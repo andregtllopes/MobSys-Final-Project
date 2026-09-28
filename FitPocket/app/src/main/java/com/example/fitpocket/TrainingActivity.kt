@@ -21,8 +21,15 @@ import kotlin.math.acos
 import kotlin.math.sqrt
 
 /**
- * Sensor 1: PROXIMITY     -> push-up (chest approaching the top of the screen)
- * Sensor 2: ACCELEROMETER -> sit-up (torso tilt angle), squat & jumping jack (motion intensity)
+ * Todos os exercícios usam o ACCELEROMETER, com duas técnicas diferentes:
+ *  - Sit-up: ângulo de inclinação do tronco (handleTilt).
+ *  - Push-up, Squat, Jumping Jack: pico de intensidade de movimento (handleMotionPeak).
+ *
+ * O push-up inicialmente usava o sensor de PROXIMITY (celular no chão, peito cobrindo a tela),
+ * mas o alcance de detecção "perto" de vários aparelhos (Samsung incluso) é curto demais para
+ * captar um peito a poucos centímetros de distância — só reagia a pressão/contato direto no
+ * sensor, o que é inviável durante um push-up real. Trocamos para a mesma técnica de movimento
+ * do squat, com o celular preso nas costas/peito em vez de apoiado no chão.
  */
 class TrainingActivity : AppCompatActivity(), SensorEventListener {
 
@@ -33,15 +40,26 @@ class TrainingActivity : AppCompatActivity(), SensorEventListener {
         private const val LOW_PASS = 0.85f             // filtro para isolar a gravidade
         private const val TAG = "FitPocketSensor"
 
-        // Agachamento e polichinelo contam por PICO de intensidade de movimento (desvio da
+        // Push-up, squat e polichinelo contam por PICO de intensidade de movimento (desvio da
         // aceleração em relação à gravidade), não por ângulo. Valores iniciais estimados a
-        // partir do padrão de movimento de cada exercício (polichinelo é bem mais brusco que
-        // agachamento); a barra + valor de debug na tela ajudam a recalibrar se necessário.
+        // partir do padrão de movimento de cada exercício; a barra + valor de debug na tela
+        // ajudam a recalibrar se necessário.
         private const val MOTION_EMA_ALPHA = 0.5f
+        private const val PUSH_UP_RISE = 2.5f
+        private const val PUSH_UP_FALL = 0.8f
         private const val SQUAT_RISE = 3.0f
         private const val SQUAT_FALL = 1.0f
         private const val JACK_RISE = 9.0f
         private const val JACK_FALL = 3.0f
+
+        // Push-up e squat são movimentos lentos, controlados, com uma pausa natural no meio
+        // (embaixo do agachamento / no fundo do push-up) — sem essa margem, essa pausa faz o
+        // sinal cair momentaneamente abaixo do limiar de "repouso" e a repetição é contada
+        // 2x (descida + subida como dois picos separados). Exigimos que o sinal fique baixo
+        // por essa duração mínima antes de considerar que a repetição realmente terminou.
+        // Polichinelo é um movimento rápido e contínuo, não precisa dessa margem.
+        private const val BODYWEIGHT_MIN_REST_MS = 350L
+        private const val JACK_MIN_REST_MS = 0L
     }
 
     private lateinit var sensorManager: SensorManager
@@ -56,19 +74,14 @@ class TrainingActivity : AppCompatActivity(), SensorEventListener {
     private var reps = 0
     private var lastRepTime = 0L
 
-    // estado da flexão — calibrado dinamicamente, sem supor a unidade que o aparelho reporta
-    // (alguns reportam distância em cm, outros só um valor binário 0/1)
-    private var wasNear = false
-    private var farBaseline = 0f
-    private var baselineReady = false
-
     // estado do abdominal
     private val gravity = floatArrayOf(0f, 0f, 9.8f)
     private var isUp = false
 
-    // estado de agachamento/polichinelo
+    // estado de push-up/agachamento/polichinelo (detecção por pico de movimento)
     private var motionIntensityEma = 0f
     private var motionPeak = false
+    private var motionRestSinceMs = 0L
 
     // Volta da SummaryActivity: repassa o resultado para o menu e fecha
     private val summaryLauncher = registerForActivityResult(
@@ -101,7 +114,7 @@ class TrainingActivity : AppCompatActivity(), SensorEventListener {
         tvExercise.text = exercise.label
         tvHint.text = when (exercise) {
             Exercise.PUSH_UP ->
-                "Place the phone on the floor, screen up. Lower your chest toward it."
+                "Keep the phone snug against your chest or upper back (e.g. in a shirt pocket) so it moves with you."
             Exercise.SIT_UP ->
                 "Lie down with the phone on your chest, screen up. Crunch up and down."
             Exercise.SQUAT ->
@@ -112,11 +125,7 @@ class TrainingActivity : AppCompatActivity(), SensorEventListener {
         ring.setProgress(reps, goal)
 
         sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
-        val type = when (exercise) {
-            Exercise.PUSH_UP -> Sensor.TYPE_PROXIMITY
-            Exercise.SIT_UP, Exercise.SQUAT, Exercise.JUMPING_JACK -> Sensor.TYPE_ACCELEROMETER
-        }
-        sensor = sensorManager.getDefaultSensor(type)
+        sensor = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
         if (sensor == null) {
             Snackbar.make(ring, "Sensor unavailable on this device. Use the +1 button.", Snackbar.LENGTH_LONG).show()
         }
@@ -150,48 +159,14 @@ class TrainingActivity : AppCompatActivity(), SensorEventListener {
 
     override fun onSensorChanged(event: SensorEvent) {
         when (exercise) {
-            Exercise.PUSH_UP -> handleProximity(event)
+            Exercise.PUSH_UP -> handleMotionPeak(event, PUSH_UP_RISE, PUSH_UP_FALL, BODYWEIGHT_MIN_REST_MS)
             Exercise.SIT_UP -> handleTilt(event)
-            Exercise.SQUAT -> handleMotionPeak(event, SQUAT_RISE, SQUAT_FALL)
-            Exercise.JUMPING_JACK -> handleMotionPeak(event, JACK_RISE, JACK_FALL)
+            Exercise.SQUAT -> handleMotionPeak(event, SQUAT_RISE, SQUAT_FALL, BODYWEIGHT_MIN_REST_MS)
+            Exercise.JUMPING_JACK -> handleMotionPeak(event, JACK_RISE, JACK_FALL, JACK_MIN_REST_MS)
         }
     }
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
-
-    /**
-     * Flexão: conta na transição "longe -> perto" (peito desceu).
-     *
-     * NÃO supomos a unidade do valor bruto: dependendo do aparelho, TYPE_PROXIMITY pode
-     * reportar distância em cm (ex.: 0..5, 0..8) OU só um valor binário 0/1 — nesse segundo
-     * caso, um limiar fixo tipo "< 3cm" trata os DOIS estados como "perto" e a detecção nunca
-     * volta a "longe", travando a contagem (isso é o que provavelmente estava acontecendo).
-     * Em vez de um número fixo, aprendemos ao vivo qual é o valor de "longe" neste aparelho e
-     * comparamos de forma relativa a ele.
-     */
-    private fun handleProximity(event: SensorEvent) {
-        val v = event.values[0]
-
-        // Atualiza a referência de "longe" enquanto não estivermos perto (ou na primeira leitura).
-        if (!baselineReady || (!wasNear && v > farBaseline)) {
-            farBaseline = v
-            baselineReady = true
-        }
-        // "Perto" = caiu abaixo de 60% do valor de "longe" observado neste aparelho (margem
-        // generosa para aparelhos que não reportam um "perto" totalmente zerado).
-        val threshold = (farBaseline * 0.6f).coerceAtLeast(0.05f)
-        val near = v < threshold
-
-        val intensity = if (farBaseline > 0f) {
-            ((farBaseline - v) / farBaseline * 100f).coerceIn(0f, 100f)
-        } else 0f
-        progressIntensity.progress = intensity.toInt()
-        tvSensorDebug.text = "debug: value=%.2f far=%.2f thr=%.2f".format(v, farBaseline, threshold)
-        Log.d(TAG, "proximity value=$v far=$farBaseline threshold=$threshold near=$near wasNear=$wasNear")
-
-        if (near && !wasNear) countRep()
-        wasNear = near
-    }
 
     /** Abdominal: ângulo entre o eixo Z do celular e a vertical; sobe (>40°) e desce (<20°) = 1 rep. */
     private fun handleTilt(event: SensorEvent) {
@@ -216,14 +191,18 @@ class TrainingActivity : AppCompatActivity(), SensorEventListener {
     }
 
     /**
-     * Agachamento e polichinelo: contam por PICO de intensidade de movimento, não por ângulo
-     * (o corpo desce/sobe ou os braços/pernas abrem/fecham de forma rápida demais para medir
-     * um ângulo estável). Usamos a mesma ideia de histerese do abdominal (handleTilt), só que
-     * aplicada à magnitude da aceleração: passa de [riseThreshold] = "em movimento", cai abaixo
-     * de [fallThreshold] = "voltou ao repouso", conta 1 repetição. Os dois exercícios usam
-     * exatamente esta função, só com limiares diferentes.
+     * Push-up, agachamento e polichinelo: contam por PICO de intensidade de movimento, não por
+     * ângulo. Usamos a mesma ideia de histerese do abdominal (handleTilt), só que aplicada à
+     * magnitude da aceleração: passa de [riseThreshold] = "em movimento"; cai abaixo de
+     * [fallThreshold] e fica assim por pelo menos [minRestMs] = "voltou ao repouso de verdade",
+     * conta 1 repetição.
+     *
+     * O [minRestMs] existe porque push-up/agachamento têm uma pausa natural no meio do
+     * movimento (embaixo do agachamento, no fundo do push-up): sem essa margem, o sinal cai
+     * momentaneamente abaixo do limiar nessa pausa e a repetição é contada 2x (descida e subida
+     * como dois picos separados). Polichinelo é rápido e contínuo, não precisa da margem (usa 0).
      */
-    private fun handleMotionPeak(event: SensorEvent, riseThreshold: Float, fallThreshold: Float) {
+    private fun handleMotionPeak(event: SensorEvent, riseThreshold: Float, fallThreshold: Float, minRestMs: Long) {
         val magnitude = sqrt(
             event.values[0] * event.values[0] +
                 event.values[1] * event.values[1] +
@@ -237,11 +216,22 @@ class TrainingActivity : AppCompatActivity(), SensorEventListener {
         tvSensorDebug.text = "debug: %.2f (rise=%.1f fall=%.1f)".format(motionIntensityEma, riseThreshold, fallThreshold)
         Log.d(TAG, "motion ema=$motionIntensityEma rise=$riseThreshold fall=$fallThreshold peak=$motionPeak")
 
-        if (!motionPeak && motionIntensityEma > riseThreshold) {
-            motionPeak = true
-        } else if (motionPeak && motionIntensityEma < fallThreshold) {
-            motionPeak = false
-            countRep()
+        val now = SystemClock.elapsedRealtime()
+        if (!motionPeak) {
+            if (motionIntensityEma > riseThreshold) {
+                motionPeak = true
+                motionRestSinceMs = 0L
+            }
+        } else {
+            if (motionIntensityEma < fallThreshold) {
+                if (motionRestSinceMs == 0L) motionRestSinceMs = now
+                if (now - motionRestSinceMs >= minRestMs) {
+                    motionPeak = false
+                    countRep()
+                }
+            } else {
+                motionRestSinceMs = 0L // ainda em movimento, cancela a confirmação de repouso
+            }
         }
     }
 
