@@ -35,7 +35,7 @@ class WorkoutAdapter(
         holder.tvTitle.text = "$label — ${w.reps}/${w.goal} reps"
         holder.tvDetail.text = "$date · $time · effort ${w.effort.toInt()}/5"
 
-        // Nota exibida direto no card, sem precisar de clique/Snackbar para revelar.
+        // Note shown directly on the card, no click needed to reveal it.
         if (w.note.isBlank()) {
             holder.tvNote.visibility = View.GONE
         } else {

@@ -8,10 +8,7 @@ import android.graphics.RectF
 import android.util.AttributeSet
 import android.view.View
 
-/**
- * CustomView: círculo de progresso desenhado com Canvas.
- * Chame setProgress(reps, meta) para atualizar (com animação).
- */
+/** CustomView: animated progress ring drawn on a Canvas. Call setProgress(reps, goal) to update. */
 class ProgressRingView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
@@ -74,7 +71,7 @@ class ProgressRingView @JvmOverloads constructor(
             width - half - paddingRight,
             height - half - paddingBottom
         )
-        // trilho cinza + arco verde começando no topo (-90°)
+        // Gray track + progress arc starting at the top (-90°).
         canvas.drawArc(oval, 0f, 360f, false, trackPaint)
         canvas.drawArc(oval, -90f, 360f * fraction, false, progressPaint)
 

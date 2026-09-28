@@ -7,10 +7,10 @@ import androidx.room.PrimaryKey
 data class Workout(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val timestamp: Long,
-    val exercise: String,   // nome do enum Exercise (PUSH_UP / SIT_UP)
+    val exercise: String,   // Exercise enum name
     val reps: Int,
     val goal: Int,
     val durationSec: Int,
-    val effort: Float,      // 1..5, vindo da RatingBar
+    val effort: Float,      // 1..5, from the RatingBar
     val note: String
 )

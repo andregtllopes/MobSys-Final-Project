@@ -51,8 +51,7 @@ class ProgressActivity : AppCompatActivity() {
     private fun dayOf(timestamp: Long): LocalDate =
         Instant.ofEpochMilli(timestamp).atZone(ZoneId.systemDefault()).toLocalDate()
 
-    /** Dias consecutivos treinando até hoje. Se ainda não treinou hoje, conta a partir de ontem
-     *  (o dia de hoje só "quebra" a sequência à meia-noite, não antes). */
+    /** Consecutive training days up to today. Today doesn't break the streak until it ends. */
     private fun currentStreak(workouts: List<Workout>): Int {
         val trainedDays = workouts.map { dayOf(it.timestamp) }.toSet()
         var cursor = LocalDate.now()
@@ -65,7 +64,7 @@ class ProgressActivity : AppCompatActivity() {
         return streak
     }
 
-    /** Total de repetições por dia nos últimos 7 dias (incluindo hoje), para o gráfico de barras. */
+    /** Total reps per day for the last 7 days, for the bar chart. */
     private fun weeklyChartData(workouts: List<Workout>): List<BarChartEntry> {
         val today = LocalDate.now()
         val repsByDay = workouts.groupBy { dayOf(it.timestamp) }

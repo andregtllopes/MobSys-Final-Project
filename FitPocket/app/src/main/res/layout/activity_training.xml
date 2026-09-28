@@ -77,34 +77,13 @@
                     android:progress="0"
                     android:progressBackgroundTint="@color/surface_alt"
                     android:progressTint="@color/primary" />
-
-                <TextView
-                    android:id="@+id/tvSensorDebug"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:gravity="center"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="11sp" />
             </LinearLayout>
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnManual"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="20dp"
-                android:text="+1 (test mode)"
-                android:textColor="@color/text_primary"
-                app:cornerRadius="16dp"
-                app:rippleColor="@color/surface_alt"
-                app:strokeColor="@color/stroke" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnFinish"
                 android:layout_width="match_parent"
                 android:layout_height="56dp"
-                android:layout_marginTop="14dp"
+                android:layout_marginTop="20dp"
                 android:text="Finish workout"
                 android:textColor="@color/text_on_accent"
                 android:textStyle="bold"

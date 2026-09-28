@@ -13,16 +13,15 @@ class MenuActivity : AppCompatActivity() {
     private lateinit var root: View
     private lateinit var goalGroup: RadioGroup
 
-    // Cards/linhas clicáveis, não androidx.widget.Button — mantém a hierarquia visual:
-    // os exercícios são ações primárias (cards grandes), Progress é uma ação secundária
-    // discreta no topo, não um botão do mesmo peso visual.
+    // Clickable cards, not Button — exercises are primary actions, Progress is a
+    // secondary link at the top.
     private lateinit var btnPushUp: View
     private lateinit var btnSitUp: View
     private lateinit var btnSquat: View
     private lateinit var btnJumpingJack: View
     private lateinit var btnProgress: View
 
-    // Volta da TrainingActivity (que por sua vez recebeu o resultado da SummaryActivity)
+    // Returns from TrainingActivity (which itself got a result from SummaryActivity).
     private val trainingLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -56,7 +55,7 @@ class MenuActivity : AppCompatActivity() {
             startActivity(Intent(this, ProgressActivity::class.java))
         }
 
-        // Animação de entrada: botões sobem e aparecem em sequência
+        // Entrance animation: cards fade and slide up in sequence.
         listOf(btnPushUp, btnSitUp, btnSquat, btnJumpingJack, btnProgress).forEachIndexed { i, button ->
             button.alpha = 0f
             button.translationY = 80f

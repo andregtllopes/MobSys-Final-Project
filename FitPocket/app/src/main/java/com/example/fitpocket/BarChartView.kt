@@ -10,11 +10,7 @@ import android.view.View
 
 data class BarChartEntry(val label: String, val value: Int, val highlighted: Boolean = false)
 
-/**
- * CustomView: gráfico de barras desenhado com Canvas para a tela de Progresso
- * (repetições feitas em cada um dos últimos 7 dias). Chame setData() para atualizar,
- * as barras crescem com uma animação simples.
- */
+/** CustomView: simple animated bar chart drawn on a Canvas, used by the Progress screen. */
 class BarChartView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null
@@ -99,7 +95,7 @@ class BarChartView @JvmOverloads constructor(
                 }
                 canvas.drawText(entry.value.toString(), cx, top - 6f * density, valuePaint)
             } else {
-                // Dia sem treino: um "stub" cinza baixinho, só para o dia continuar visível no eixo.
+                // No workout that day: small gray stub so the day still shows on the axis.
                 stubRect.set(cx - barWidth / 2f, chartBottom - stubHeight, cx + barWidth / 2f, chartBottom)
                 canvas.drawRoundRect(stubRect, radius, radius, trackPaint)
                 if (entry.highlighted) {

@@ -1,6 +1,5 @@
 package com.example.fitpocket
 
-/** Enum já é Serializable, então pode ir direto no putExtra (Tutorial 3, Ex. 3). */
 enum class Exercise(val label: String) {
     PUSH_UP("Push-up"),
     SIT_UP("Sit-up"),
@@ -8,7 +7,7 @@ enum class Exercise(val label: String) {
     JUMPING_JACK("Jumping Jack")
 }
 
-/** Chaves dos extras da Intent, centralizadas para evitar erro de digitação. */
+/** Intent extra keys. */
 object Extras {
     const val EXERCISE = "exercise"
     const val GOAL = "goal"

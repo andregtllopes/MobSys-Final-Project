@@ -1,7 +1,5 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Must stay a Material Components theme, otherwise Snackbar.make() throws at runtime.
-         Deliberately a fixed dark theme (not DayNight): the whole UI is designed dark-mode-first,
-         so we don't want it to flip depending on the system setting. -->
+    <!-- Must be a Material Components theme (Snackbar requires it). Fixed dark theme, not DayNight. -->
     <style name="Theme.FitPocket" parent="Theme.MaterialComponents.NoActionBar">
         <item name="colorPrimary">@color/primary</item>
         <item name="colorPrimaryDark">@color/background</item>

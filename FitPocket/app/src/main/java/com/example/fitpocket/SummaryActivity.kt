@@ -25,7 +25,6 @@ class SummaryActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_summary)
 
-        // "Abrir a mochila": Activity de destino só lê o que veio na Intent
         val exercise = intent.getSerializableExtra(Extras.EXERCISE, Exercise::class.java)
             ?: Exercise.PUSH_UP
         val reps = intent.getIntExtra(Extras.REPS, 0)
@@ -42,7 +41,7 @@ class SummaryActivity : AppCompatActivity() {
         tvCounter = findViewById(R.id.tvCounter)
         btnSave = findViewById(R.id.btnSave)
 
-        // Só habilita salvar depois que o usuário avaliou o esforço
+        // Only enable Save once the user has rated the effort.
         ratingEffort.setOnRatingBarChangeListener { _, rating, fromUser ->
             if (fromUser) {
                 effort = rating
@@ -63,11 +62,10 @@ class SummaryActivity : AppCompatActivity() {
                 goal = goal,
                 durationSec = duration,
                 effort = effort,
-                note = etNote.text.toString().trim()   // .text.toString(), nunca o EditText direto
+                note = etNote.text.toString().trim()
             )
             lifecycleScope.launch {
                 AppDatabase.get(this@SummaryActivity).workoutDao().insert(workout)
-                // devolve o resultado para a Activity anterior
                 setResult(RESULT_OK, Intent().putExtra(Extras.SAVED, true))
                 finish()
             }
