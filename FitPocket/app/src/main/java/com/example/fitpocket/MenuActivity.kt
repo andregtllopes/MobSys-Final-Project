@@ -1,0 +1,74 @@
+package com.example.fitpocket
+
+import android.content.Intent
+import android.os.Bundle
+import android.view.View
+import android.widget.Button
+import android.widget.RadioGroup
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AppCompatActivity
+import com.google.android.material.snackbar.Snackbar
+
+class MenuActivity : AppCompatActivity() {
+
+    private lateinit var root: View
+    private lateinit var goalGroup: RadioGroup
+    private lateinit var btnPushUp: Button
+    private lateinit var btnSitUp: Button
+    private lateinit var btnHistory: Button
+
+    // Volta da TrainingActivity (que por sua vez recebeu o resultado da SummaryActivity)
+    private val trainingLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        val saved = result.data?.getBooleanExtra(Extras.SAVED, false) == true
+        if (result.resultCode == RESULT_OK && saved) {
+            Snackbar.make(root, "Treino salvo no histórico!", Snackbar.LENGTH_LONG)
+                .setAction("Ver") {
+                    startActivity(Intent(this, HistoryActivity::class.java))
+                }
+                .show()
+        }
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_menu)
+
+        root = findViewById(R.id.menuRoot)
+        goalGroup = findViewById(R.id.goalGroup)
+        btnPushUp = findViewById(R.id.btnPushUp)
+        btnSitUp = findViewById(R.id.btnSitUp)
+        btnHistory = findViewById(R.id.btnHistory)
+
+        btnPushUp.setOnClickListener { startTraining(Exercise.PUSH_UP) }
+        btnSitUp.setOnClickListener { startTraining(Exercise.SIT_UP) }
+        btnHistory.setOnClickListener {
+            startActivity(Intent(this, HistoryActivity::class.java))
+        }
+
+        // Animação de entrada: botões sobem e aparecem em sequência
+        listOf(btnPushUp, btnSitUp, btnHistory).forEachIndexed { i, button ->
+            button.alpha = 0f
+            button.translationY = 80f
+            button.animate()
+                .alpha(1f)
+                .translationY(0f)
+                .setDuration(400)
+                .setStartDelay(150L * i)
+                .start()
+        }
+    }
+
+    private fun startTraining(exercise: Exercise) {
+        val goal = when (goalGroup.checkedRadioButtonId) {
+            R.id.goal10 -> 10
+            R.id.goal20 -> 20
+            else -> 30
+        }
+        val intent = Intent(this, TrainingActivity::class.java)
+            .putExtra(Extras.EXERCISE, exercise)
+            .putExtra(Extras.GOAL, goal)
+        trainingLauncher.launch(intent)
+    }
+}
