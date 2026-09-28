@@ -3,7 +3,6 @@ package com.example.fitpocket
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
-import android.widget.Button
 import android.widget.RadioGroup
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -13,9 +12,13 @@ class MenuActivity : AppCompatActivity() {
 
     private lateinit var root: View
     private lateinit var goalGroup: RadioGroup
-    private lateinit var btnPushUp: Button
-    private lateinit var btnSitUp: Button
-    private lateinit var btnHistory: Button
+
+    // Cards/linhas clicáveis, não androidx.widget.Button — mantém a hierarquia visual:
+    // os exercícios são ações primárias (cards grandes), Histórico é uma ação secundária
+    // discreta no topo, não um botão do mesmo peso visual.
+    private lateinit var btnPushUp: View
+    private lateinit var btnSitUp: View
+    private lateinit var btnHistory: View
 
     // Volta da TrainingActivity (que por sua vez recebeu o resultado da SummaryActivity)
     private val trainingLauncher = registerForActivityResult(

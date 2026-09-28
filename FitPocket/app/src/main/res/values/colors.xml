@@ -1,8 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="primary">#2E7D32</color>
-    <color name="primary_dark">#1B5E20</color>
-    <color name="accent">#66BB6A</color>
-    <color name="background">#FAFAFA</color>
+    <!-- Neon accent -->
+    <color name="primary">#C6FF00</color>
+    <color name="primary_dark">#9CCC00</color>
+    <color name="accent">#C6FF00</color>
+
+    <!-- Dark surfaces -->
+    <color name="background">#0D0D0F</color>
+    <color name="surface">#1B1C1F</color>
+    <color name="surface_alt">#232427</color>
+    <color name="stroke">#2C2D31</color>
+
+    <!-- Text -->
     <color name="white">#FFFFFF</color>
+    <color name="text_primary">#FFFFFF</color>
+    <color name="text_secondary">#9AA0A6</color>
+    <color name="text_on_accent">#101204</color>
 </resources>

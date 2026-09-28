@@ -24,22 +24,22 @@ class ProgressRingView @JvmOverloads constructor(
     private val trackPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeWidth = strokePx
-        color = 0xFFE0E0E0.toInt()
+        color = 0xFF2C2D31.toInt()
     }
     private val progressPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeWidth = strokePx
         strokeCap = Paint.Cap.ROUND
-        color = 0xFF2E7D32.toInt()
+        color = 0xFFC6FF00.toInt()
     }
     private val countPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = 0xFF212121.toInt()
+        color = 0xFFFFFFFF.toInt()
         textAlign = Paint.Align.CENTER
         textSize = 72f * density
         isFakeBoldText = true
     }
     private val goalPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = 0xFF757575.toInt()
+        color = 0xFF9AA0A6.toInt()
         textAlign = Paint.Align.CENTER
         textSize = 20f * density
     }
@@ -82,7 +82,7 @@ class ProgressRingView @JvmOverloads constructor(
         val cy = height / 2f
         val baseline = cy - (countPaint.ascent() + countPaint.descent()) / 2
         canvas.drawText(reps.toString(), cx, baseline, countPaint)
-        canvas.drawText("de $goal", cx, cy + 56f * density, goalPaint)
+        canvas.drawText("of $goal", cx, cy + 56f * density, goalPaint)
     }
 
     override fun onDetachedFromWindow() {
