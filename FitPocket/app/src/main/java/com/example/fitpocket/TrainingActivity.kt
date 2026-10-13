@@ -7,6 +7,7 @@ import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.os.Bundle
 import android.os.SystemClock
+import android.view.View
 import android.view.WindowManager
 import android.widget.Button
 import android.widget.Chronometer
@@ -19,7 +20,7 @@ import kotlin.math.abs
 import kotlin.math.acos
 import kotlin.math.sqrt
 
-/** Reads the accelerometer and counts reps for each exercise. */
+/** Reads the accelerometer to count reps, and the light sensor to show the room's lighting. */
 class TrainingActivity : AppCompatActivity(), SensorEventListener {
 
     companion object {
@@ -48,7 +49,9 @@ class TrainingActivity : AppCompatActivity(), SensorEventListener {
     private lateinit var ring: ProgressRingView
     private lateinit var chrono: Chronometer
     private lateinit var progressIntensity: ProgressBar
-    private var sensor: Sensor? = null
+    private lateinit var tvLight: TextView
+    private var accelSensor: Sensor? = null
+    private var lightSensor: Sensor? = null
 
     private var goal = 10
     private var reps = 0
@@ -85,6 +88,7 @@ class TrainingActivity : AppCompatActivity(), SensorEventListener {
         ring = findViewById(R.id.ring)
         chrono = findViewById(R.id.chrono)
         progressIntensity = findViewById(R.id.progressIntensity)
+        tvLight = findViewById(R.id.tvLight)
         val tvExercise = findViewById<TextView>(R.id.tvExercise)
         val tvHint = findViewById<TextView>(R.id.tvHint)
         val btnFinish = findViewById<Button>(R.id.btnFinish)
@@ -103,9 +107,13 @@ class TrainingActivity : AppCompatActivity(), SensorEventListener {
         ring.setProgress(reps, goal)
 
         sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
-        sensor = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
-        if (sensor == null) {
+        accelSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+        lightSensor = sensorManager.getDefaultSensor(Sensor.TYPE_LIGHT)
+        if (accelSensor == null) {
             Snackbar.make(ring, "Sensor unavailable on this device.", Snackbar.LENGTH_LONG).show()
+        }
+        if (lightSensor == null) {
+            tvLight.visibility = View.GONE
         }
 
         chrono.base = SystemClock.elapsedRealtime()
@@ -125,7 +133,8 @@ class TrainingActivity : AppCompatActivity(), SensorEventListener {
     // Register/unregister with the activity lifecycle to save battery.
     override fun onResume() {
         super.onResume()
-        sensor?.let { sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_GAME) }
+        accelSensor?.let { sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_GAME) }
+        lightSensor?.let { sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_NORMAL) }
     }
 
     override fun onPause() {
@@ -134,11 +143,14 @@ class TrainingActivity : AppCompatActivity(), SensorEventListener {
     }
 
     override fun onSensorChanged(event: SensorEvent) {
-        when (exercise) {
-            Exercise.PUSH_UP -> handleMotionPeak(event, PUSH_UP_RISE, PUSH_UP_FALL, BODYWEIGHT_MIN_REST_MS)
-            Exercise.SIT_UP -> handleTilt(event)
-            Exercise.SQUAT -> handleMotionPeak(event, SQUAT_RISE, SQUAT_FALL, BODYWEIGHT_MIN_REST_MS)
-            Exercise.JUMPING_JACK -> handleMotionPeak(event, JACK_RISE, JACK_FALL, JACK_MIN_REST_MS)
+        when (event.sensor.type) {
+            Sensor.TYPE_LIGHT -> handleLight(event)
+            Sensor.TYPE_ACCELEROMETER -> when (exercise) {
+                Exercise.PUSH_UP -> handleMotionPeak(event, PUSH_UP_RISE, PUSH_UP_FALL, BODYWEIGHT_MIN_REST_MS)
+                Exercise.SIT_UP -> handleTilt(event)
+                Exercise.SQUAT -> handleMotionPeak(event, SQUAT_RISE, SQUAT_FALL, BODYWEIGHT_MIN_REST_MS)
+                Exercise.JUMPING_JACK -> handleMotionPeak(event, JACK_RISE, JACK_FALL, JACK_MIN_REST_MS)
+            }
         }
     }
 
@@ -198,6 +210,16 @@ class TrainingActivity : AppCompatActivity(), SensorEventListener {
             } else {
                 motionRestSinceMs = 0L // still moving, cancel the rest timer
             }
+        }
+    }
+
+    /** Light sensor: shows the room's lighting condition. Doesn't affect rep counting. */
+    private fun handleLight(event: SensorEvent) {
+        val lux = event.values[0]
+        tvLight.text = when {
+            lux < 10 -> "🌙 Dark room"
+            lux < 200 -> "🔅 Dim room"
+            else -> "💡 Bright room"
         }
     }
 
